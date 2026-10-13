@@ -1,0 +1,6 @@
+{
+  "appId": "com.hesabat.app",
+  "appName": "حسابات الشغل",
+  "webDir": "www",
+  "android": { "backgroundColor": "#faf7f2" }
+}
