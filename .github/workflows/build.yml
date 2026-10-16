@@ -1,0 +1,50 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Prepare www
+        run: |
+          mkdir -p www/icons
+          cp index.html manifest.webmanifest www/
+          cp *.png www/icons/
+      - run: npm install
+      - run: npx cap add android
+      - name: Icons
+        run: |
+          R=android/app/src/main/res
+          rm -rf $R/mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; z=${d##*:}
+            for f in ic_launcher ic_launcher_round ic_launcher_foreground; do
+              convert www/icons/icon-512.png -resize ${z}x${z} $R/mipmap-$n/$f.png
+              rm -f $R/mipmap-$n/$f.webp
+            done
+          done
+      - name: Storage permissions
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <application android:requestLegacyExternalStorage="true"#' $M
+      - name: Version
+        run: sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+      - name: Stable signing key
+        run: |
+          mkdir -p ~/.android
+          echo "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" | base64 -d > ~/.android/debug.keystore
+      - run: npx cap sync android
+      - name: Build
+        working-directory: android
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hesabat-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
